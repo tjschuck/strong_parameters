@@ -35,6 +35,10 @@ You can also use permit on nested parameters, like:
 
 Thanks to Nick Kallen for the permit idea!
 
+You can also easily permit similarly named parameters using regular expressions:
+
+    params.permit(/^company_\d$/ => [:name, :location, /^quarter_\d_profit$/])
+
 == Todos
 
 * Automatically permit parameters coming from a signed form [Yehuda]

@@ -39,19 +39,25 @@ module ActionController
         case filter
         when Symbol then
           params[filter] = self[filter] if has_key?(filter)
+        when Regexp then
+          self.each do |key, value|
+            params[key] = self[key] if key =~ filter
+          end
         when Hash then
-          self.slice(*filter.keys).each do |key, value|
+          expanded_filter = expand_regexp_filters(filter)
+
+          self.slice(*expanded_filter.keys).each do |key, value|
             return unless value
 
             key = key.to_sym
 
             params[key] = each_element(value) do |value|
               # filters are a Hash, so we expect value to be a Hash too
-              next if filter.is_a?(Hash) && !value.is_a?(Hash)
+              next if expanded_filter.is_a?(Hash) && !value.is_a?(Hash)
 
               value = self.class.new(value) if !value.respond_to?(:permit)
 
-              value.permit(*Array.wrap(filter[key]))
+              value.permit(*Array.wrap(expanded_filter[key]))
             end
           end
         end
@@ -96,6 +102,18 @@ module ActionController
         else
           yield object
         end
+      end
+
+      def expand_regexp_filters(filter)
+        expanded_filter = filter.select{|k,v| !k.is_a?(Regexp) }
+        filter.each do |filter_key, filter_value|
+          if filter_key.is_a?(Regexp)
+            self.select {|k,v| k =~ filter_key }.each do |k, v|
+              expanded_filter[k] = filter_value
+            end
+          end
+        end
+        self.class.new(expanded_filter)
       end
   end
 
